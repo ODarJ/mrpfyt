@@ -37,14 +37,20 @@ jobs:
       - name: Install yt-dlp
         run: pip install -U yt-dlp
 
-      - name: Restore cookies
+      - name: Prepare cookies (optional)
         run: |
-          echo "${{ secrets.YT_COOKIES }}" | base64 -d > cookies.txt
-          ls -la cookies.txt
+          if [ -n "${{ secrets.YT_COOKIES }}" ]; then
+            echo "${{ secrets.YT_COOKIES }}" | base64 -d > cookies.txt
+            echo "COOKIE_FLAG=--cookies cookies.txt" >> $GITHUB_ENV
+            echo "Cookies restored."
+          else
+            echo "COOKIE_FLAG=" >> $GITHUB_ENV
+            echo "No cookies provided, continuing without."
+          fi
 
       - name: Download audio
         run: |
-          yt-dlp --cookies cookies.txt -x --audio-format mp3 \
+          yt-dlp $COOKIE_FLAG -x --audio-format mp3 \
             -o audio.mp3 "${{ github.event.inputs.yt_url }}"
 
       - name: Install Whisper
@@ -71,7 +77,7 @@ jobs:
 
       - name: Download source video
         run: |
-          yt-dlp --cookies cookies.txt -f "bv*+ba/b" \
+          yt-dlp $COOKIE_FLAG -f "bv*+ba/b" \
             -o video.mp4 "${{ github.event.inputs.yt_url }}"
 
       - name: Merge video + Myanmar audio
