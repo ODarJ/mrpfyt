@@ -1,0 +1,10 @@
+cookies.txt
+cookies.b64
+audio.mp3
+audio.srt
+video.mp4
+myanmar.txt
+myanmar.wav
+output.mp4
+__pycache__/
+*.pyc
