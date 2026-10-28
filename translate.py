@@ -31,7 +31,7 @@ prompt = (
 
 url = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-2.0-flash:generateContent?key={API_KEY}"
+    f"gemini-1.5-flash:generateContent?key={API_KEY}"
 )
 body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode()
 req = urllib.request.Request(
