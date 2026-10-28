@@ -8,21 +8,16 @@ SRT_PATH = sys.argv[1]
 OUT_PATH = sys.argv[2]
 API_KEY = os.environ["LLM_API_KEY"]
 
-# SRT ဖိုင်ဖတ်
 with open(SRT_PATH, encoding="utf-8") as f:
     raw = f.read()
 
-# SRT ထဲက စာသားလိုင်းတွေကိုပဲ ဆွဲထုတ် (index နဲ့ timestamp ဖယ်)
 lines = raw.splitlines()
 texts = []
 for ln in lines:
     s = ln.strip()
-    if not s:
-        continue
-    if s.isdigit():
-        continue
-    if "-->" in s:
-        continue
+    if not s: continue
+    if s.isdigit(): continue
+    if "-->" in s: continue
     texts.append(s)
 
 joined = "\n".join(texts)
