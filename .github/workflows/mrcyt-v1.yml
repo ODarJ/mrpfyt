@@ -3,8 +3,8 @@ name: MRCYT v1 (Rough Pipeline)
 on:
   workflow_dispatch:
     inputs:
-      yt_url:
-        description: 'YouTube URL (required)'
+      video_url:
+        description: 'GitHub Release Video URL (.webm or .mp4)'
         required: true
         type: string
 
@@ -17,15 +17,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate input URL
-        run: |
-          URL="${{ github.event.inputs.yt_url }}"
-          if [ -z "$URL" ]; then
-            echo "::error::YouTube URL is required."
-            exit 1
-          fi
-          echo "Target URL: $URL"
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -34,44 +25,13 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Install Deno (JavaScript runtime)
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Install yt-dlp
-        run: pip install -U yt-dlp
-
-      - name: Install PO Token Provider
+      - name: Download video from GitHub Release
         run: |
-          # PO Token ထုတ်ပေးတဲ့ ဆာဗာကို ထည့်သွင်းခြင်း
-          git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git
-          cd bgutil-ytdlp-pot-provider/server/
-          deno install --allow-scripts=npm:canvas --frozen
-          
-          # နောက်ခံမှာ ဆာဗာကို စတင်ခြင်း
-          nohup deno run --allow-all main.ts > pot_server.log 2>&1 &
-          
-          # yt-dlp အတွက် plugin ကို ထည့်သွင်းခြင်း
-          cd ../..
-          pip install -U bgutil-ytdlp-pot-provider
+          wget -O video.webm "${{ github.event.inputs.video_url }}"
 
-      - name: Prepare cookies (optional)
+      - name: Extract audio from video
         run: |
-          if [ -n "${{ secrets.YT_COOKIES }}" ]; then
-            echo "${{ secrets.YT_COOKIES }}" | base64 -d > cookies.txt
-            echo "COOKIE_FLAG=--cookies cookies.txt" >> $GITHUB_ENV
-            echo "Cookies restored."
-          else
-            echo "COOKIE_FLAG=" >> $GITHUB_ENV
-            echo "No cookies provided, continuing without."
-          fi
-
-      - name: Download audio
-        run: |
-          yt-dlp $COOKIE_FLAG -x --audio-format mp3 \
-            --extractor-args "youtube:player_client=web_safari,android_vr,tv" \
-            -o audio.mp3 "${{ github.event.inputs.yt_url }}"
+          ffmpeg -y -i video.webm -vn -acodec libmp3lame -q:a 4 audio.mp3
 
       - name: Install Whisper
         run: pip install -U openai-whisper
@@ -95,15 +55,9 @@ jobs:
         run: |
           f5-myanmar "$(cat myanmar.txt)" -o myanmar.wav
 
-      - name: Download source video
-        run: |
-          yt-dlp $COOKIE_FLAG -f "bv*+ba/b" \
-            --extractor-args "youtube:player_client=web_safari,android_vr,tv" \
-            -o video.mp4 "${{ github.event.inputs.yt_url }}"
-
       - name: Merge video + Myanmar audio
         run: |
-          ffmpeg -y -i video.mp4 -i myanmar.wav \
+          ffmpeg -y -i video.webm -i myanmar.wav \
             -c:v copy -map 0:v:0 -map 1:a:0 \
             -shortest output.mp4
           ls -lh output.mp4
