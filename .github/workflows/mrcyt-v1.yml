@@ -34,8 +34,27 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
+      - name: Install Deno (JavaScript runtime)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Install yt-dlp
         run: pip install -U yt-dlp
+
+      - name: Install PO Token Provider
+        run: |
+          # PO Token ထုတ်ပေးတဲ့ ဆာဗာကို ထည့်သွင်းခြင်း
+          git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git
+          cd bgutil-ytdlp-pot-provider/server/
+          deno install --allow-scripts=npm:canvas --frozen
+          
+          # နောက်ခံမှာ ဆာဗာကို စတင်ခြင်း
+          nohup deno run --allow-all main.ts > pot_server.log 2>&1 &
+          
+          # yt-dlp အတွက် plugin ကို ထည့်သွင်းခြင်း
+          cd ../..
+          pip install -U bgutil-ytdlp-pot-provider
 
       - name: Prepare cookies (optional)
         run: |
@@ -51,6 +70,7 @@ jobs:
       - name: Download audio
         run: |
           yt-dlp $COOKIE_FLAG -x --audio-format mp3 \
+            --extractor-args "youtube:player_client=web_safari,android_vr,tv" \
             -o audio.mp3 "${{ github.event.inputs.yt_url }}"
 
       - name: Install Whisper
@@ -78,6 +98,7 @@ jobs:
       - name: Download source video
         run: |
           yt-dlp $COOKIE_FLAG -f "bv*+ba/b" \
+            --extractor-args "youtube:player_client=web_safari,android_vr,tv" \
             -o video.mp4 "${{ github.event.inputs.yt_url }}"
 
       - name: Merge video + Myanmar audio
